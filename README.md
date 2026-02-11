@@ -15,7 +15,21 @@
 - Optional End-4 copy integration for generated `colors.json`.
 - Optional custom source image via `--image` (works even when icons are unavailable).
 
-## Install (simple)
+## Install (easy)
+
+One command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MaxxWasHere/matugenium/main/install.sh | bash
+```
+
+This installer:
+
+- uses `pipx` when available (recommended for global CLI apps)
+- falls back to `python3 -m pip install --user` if `pipx` is missing
+- prints next steps if your PATH needs `~/.local/bin`
+
+## Install (from cloned repo)
 
 From this project directory, run one command:
 
