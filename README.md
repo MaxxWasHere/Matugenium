@@ -20,46 +20,21 @@
 One command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/MaxxWasHere/matugenium/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MaxxWasHere/Matugenium/main/install.sh | bash
 ```
 
 This installer:
 
 - uses `pipx` when available (recommended for global CLI apps)
 - falls back to `python3 -m pip install --user` if `pipx` is missing
-- prints next steps if your PATH needs `~/.local/bin`
+- prints exact next steps if your PATH needs `~/.local/bin`
 
-## Install (from cloned repo)
-
-From this project directory, run one command:
+Manual alternatives:
 
 ```bash
-./install.sh
-```
-
-Or directly:
-
-```bash
-python3 scripts/install.py
-```
-
-The installer creates launcher files in your user bin directory:
-
-- Linux/macOS: `~/.local/bin/matugenium`
-- Windows: `%LOCALAPPDATA%\\matugenium\\bin\\matugenium.cmd` and `.ps1`
-
-It prints PATH instructions for bash/zsh/fish/PowerShell.
-
-Optional package install path (pip/pipx):
-
-```bash
-python -m pip install --user .
-```
-
-Or for isolated CLI install:
-
-```bash
-pipx install .
+pipx install git+https://github.com/MaxxWasHere/Matugenium.git
+# or
+python3 -m pip install --user --upgrade git+https://github.com/MaxxWasHere/Matugenium.git
 ```
 
 ## Requirements

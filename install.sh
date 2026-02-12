@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_URL="git+https://github.com/MaxxWasHere/matugenium.git"
+REPO_URL="git+https://github.com/MaxxWasHere/Matugenium.git"
 APP_NAME="matugenium"
 
 info() {
@@ -52,7 +52,7 @@ verify_install() {
   if need_cmd "$APP_NAME"; then
     info "Install success."
     "$APP_NAME" --help >/dev/null 2>&1 || true
-    info "Run: matugenium --gen-all  (or --gen <app>)"
+    info "Run: matugenium --gen <app>  OR  matugenium --gen-all"
     return 0
   fi
 
