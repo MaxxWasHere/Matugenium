@@ -56,6 +56,18 @@ def _print(text: str, verbose: bool = False) -> None:
         print(text)
 
 
+def _info(message: str) -> None:
+    print(f"INFO: {message}")
+
+
+def _warn(message: str) -> None:
+    print(f"WARN: {message}")
+
+
+def _error(message: str) -> None:
+    print(f"ERROR: {message}", file=sys.stderr)
+
+
 def _record_payload(app_name: str, desktop_id: str, output_dir: Path, source_image: str, end4_path: Path | None) -> dict[str, str]:
     payload: dict[str, str] = {
         "name": app_name,
@@ -102,8 +114,10 @@ def main(argv: list[str] | None = None) -> int:
     state = StateStore()
 
     if args.list_apps:
+        _info(f"Detected applications: {len(apps)}")
         for app in apps:
-            print(f"{app.name} ({app.desktop_id}) [{app.icon or 'no-icon'}]")
+            icon_state = "icon" if app.icon else "no-icon"
+            print(f"- {app.name} ({app.desktop_id}) [{icon_state}]")
         return 0
 
     if args.gen:
@@ -123,19 +137,19 @@ def main(argv: list[str] | None = None) -> int:
             app_key = normalize_app_key(app.desktop_id or app.name)
             existing = state.all_profiles().get(app_key)
             if existing and not args.force:
-                print(
-                    f"Profile already exists for {app.name}; use --force to regenerate."
-                )
+                _warn(f"Profile already exists for {app.name}. Use --force to regenerate.")
                 return 0
+            _info(f"Generating profile for app: {app.name}")
             result = generate_for_app(
                 app,
                 output_root=args.output_dir,
                 end4_dir=args.end4_dir,
                 fallback_image=str(args.image.expanduser()) if args.image else None,
                 dry_run=args.dry_run,
+                verbose=args.verbose,
             )
         except Exception as exc:  # noqa: BLE001
-            print(f"error: {exc}", file=sys.stderr)
+            _error(str(exc))
             return 2
         state.record_profile(
             result.app_key,
@@ -148,7 +162,7 @@ def main(argv: list[str] | None = None) -> int:
             ),
         )
         _print(f"command: {' '.join(result.command)}", args.verbose)
-        print(f"Generated profile for {app.name} -> {result.output_dir}")
+        _info(f"Generated profile for {app.name} -> {result.output_dir}")
         return 0
 
     if args.ungen:
@@ -162,21 +176,21 @@ def main(argv: list[str] | None = None) -> int:
         fallback_key = normalize_app_key(app.desktop_id or app.name) if app else None
         final_key = direct_key or fallback_key
         if not final_key:
-            print(f"No managed profile found for {args.ungen}")
+            _warn(f"No managed profile found for {args.ungen}")
             return 0
 
         record = state.get_profile(final_key)
         if not record:
-            print(f"No managed profile found for {args.ungen}")
+            _warn(f"No managed profile found for {args.ungen}")
             return 0
         managed_root = args.output_dir.expanduser() if args.output_dir else None
         try:
             _remove_tracked_paths(record, dry_run=args.dry_run, managed_root=managed_root)
         except Exception as exc:  # noqa: BLE001
-            print(f"error: {exc}", file=sys.stderr)
+            _error(str(exc))
             return 3
         state.remove_profile(final_key)
-        print(f"Removed profile for {record.get('name', args.ungen)}")
+        _info(f"Removed profile for {record.get('name', args.ungen)}")
         return 0
 
     if args.gen_all:
@@ -185,22 +199,26 @@ def main(argv: list[str] | None = None) -> int:
         skipped = 0
         failures: list[str] = []
         if not apps:
-            print("No installed desktop applications detected.")
+            _warn("No installed desktop applications detected.")
             return 0
         state_profiles = state.all_profiles()
+        total = len(apps)
+        _info(f"Starting gen-all for {total} detected app(s)")
         for app in apps:
             app_key = normalize_app_key(app.desktop_id or app.name)
             if app_key in state_profiles and not args.force:
                 skipped += 1
-                _print(f"skipped {app.name} (exists)", args.verbose)
+                _print(f"[skip] {app.name} (exists)", args.verbose)
                 continue
             try:
+                _print(f"[{success + failed + skipped + 1}/{total}] generating {app.name}", args.verbose)
                 result = generate_for_app(
                     app,
                     output_root=args.output_dir,
                     end4_dir=args.end4_dir,
                     fallback_image=str(args.image.expanduser()) if args.image else None,
                     dry_run=args.dry_run,
+                    verbose=args.verbose,
                 )
                 state.record_profile(
                     result.app_key,
@@ -213,16 +231,20 @@ def main(argv: list[str] | None = None) -> int:
                     ),
                 )
                 success += 1
-                _print(f"generated {app.name}", args.verbose)
+                _print(f"[ok] {app.name}", args.verbose)
             except Exception as exc:  # noqa: BLE001
                 failed += 1
                 failures.append(f"{app.name}: {exc}")
-                _print(f"failed {app.name}: {exc}", args.verbose)
+                _print(f"[fail] {app.name}: {exc}", args.verbose)
                 continue
-        print(f"gen-all complete: success={success} failed={failed} skipped={skipped}")
-        if failures and args.verbose:
-            for failure in failures:
-                print(f"  - {failure}")
+        _info(f"gen-all complete: success={success} failed={failed} skipped={skipped}")
+        if failures:
+            max_items = len(failures) if args.verbose else min(5, len(failures))
+            for failure in failures[:max_items]:
+                _warn(failure)
+            remaining = len(failures) - max_items
+            if remaining > 0:
+                _warn(f"... and {remaining} more failure(s). Re-run with --verbose for full details.")
         return 0 if failed == 0 else 4
 
     return 0

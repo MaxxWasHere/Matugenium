@@ -83,6 +83,7 @@ def generate_for_app(
     end4_dir: Path | None = None,
     fallback_image: str | None = None,
     dry_run: bool = False,
+    verbose: bool = False,
 ) -> GenerationResult:
     ensure_matugen_available()
     app_key = normalize_app_key(app.desktop_id or app.name)
@@ -109,7 +110,25 @@ def generate_for_app(
     end4_target: Path | None = None
     if not dry_run:
         output_dir.mkdir(parents=True, exist_ok=True)
-        subprocess.run(command, check=True, cwd=output_dir)
+        proc = subprocess.run(
+            command,
+            check=False,
+            cwd=output_dir,
+            capture_output=True,
+            text=True,
+        )
+        if proc.returncode != 0:
+            stderr = (proc.stderr or "").strip()
+            stdout = (proc.stdout or "").strip()
+            if verbose:
+                detail = stderr or stdout or f"exit code {proc.returncode}"
+            else:
+                detail = (stderr.splitlines()[0] if stderr else "") or (
+                    stdout.splitlines()[0] if stdout else ""
+                )
+                if not detail:
+                    detail = f"matugen command failed with exit code {proc.returncode}"
+            raise RuntimeError(detail)
         end4_base = end4_dir or _default_end4_dir()
         if end4_base:
             end4_target = end4_base / "matugenium" / "apps" / app_key / "colors.json"
